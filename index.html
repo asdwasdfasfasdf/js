@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倒计时器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .input-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .input-group input, .input-group select {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .input-group input:focus, .input-group select:focus {
+            border-color: #667eea;
+        }
+        .input-group input[type="number"] {
+            width: 100px;
+        }
+        .input-group input[type="text"] {
+            flex: 1;
+            min-width: 150px;
+        }
+        .input-group select {
+            min-width: 150px;
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .btn-add {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-create-group {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        .btn-start-all {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            width: 100%;
+            margin-bottom: 25px;
+            padding: 15px;
+            font-size: 18px;
+        }
+        .btn-start-group {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+        }
+        .btn-delete-group {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        .group-list {
+            display: grid;
+            gap: 20px;
+        }
+        .group-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .group-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+        }
+        .group-timers {
+            display: grid;
+            gap: 12px;
+        }
+        .timer-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .timer-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .timer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .timer-name {
+            font-size: 1em;
+            font-weight: 500;
+            color: #333;
+        }
+        .timer-time {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #667eea;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+        .timer-time.warning {
+            color: #f39c12;
+        }
+        .timer-time.danger {
+            color: #e74c3c;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .timer-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .btn-start {
+            background: #11998e;
+            color: white;
+            flex: 1;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        .btn-pause {
+            background: #f39c12;
+            color: white;
+            flex: 1;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        .btn-reset {
+            background: #95a5a6;
+            color: white;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+        .btn-remove-from-group {
+            background: #f39c12;
+            color: white;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+        .status {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-weight: 600;
+        }
+        .status.running {
+            background: #d5f4e6;
+            color: #11998e;
+        }
+        .status.paused {
+            background: #fef5e7;
+            color: #f39c12;
+        }
+        .status.completed {
+            background: #ffebee;
+            color: #e74c3c;
+        }
+        .status.waiting {
+            background: #e8eaf6;
+            color: #667eea;
+        }
+        .empty-state {
+            text-align: center;
+            color: white;
+            padding: 50px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .empty-state p {
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+        .group-count {
+            font-size: 0.9em;
+            color: #666;
+            margin-left: 5px;
+        }
+        .ungrouped-section {
+            border-left-color: #95a5a6;
+        }
+        .ringtone-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .ringtone-section h2 {
+            color: white;
+            margin-top: 0;
+            font-size: 1.2em;
+        }
+        .ringtone-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .current-ringtone {
+            color: white;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .btn-remove-ringtone {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .btn-remove-ringtone:hover {
+            background: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏱️ 倒计时器</h1>
+        
+        <div class="section">
+            <h2>📝 添加新倒计时</h2>
+            <div class="input-group">
+                <input type="number" id="hours" placeholder="小时" min="0" max="23">
+                <input type="number" id="minutes" placeholder="分钟" min="0" max="59">
+                <input type="number" id="seconds" placeholder="秒" min="0" max="59">
+                <input type="text" id="timerName" placeholder="倒计时名称（可选）">
+                <select id="groupSelect">
+                    <option value="">选择分组</option>
+                </select>
+                <button class="btn btn-add" onclick="addTimer()">添加</button>
+            </div>
+        </div>
+
+        <div class="section ringtone-section">
+            <h2>🎵 自定义铃声</h2>
+            <div class="ringtone-controls">
+                <input type="file" id="ringtoneFile" accept="audio/*" style="display: none;" onchange="handleRingtoneUpload(event)">
+                <button class="btn btn-add" onclick="document.getElementById('ringtoneFile').click()">📁 选择音乐文件</button>
+                <span class="current-ringtone" id="currentRingtone">当前: 默认铃声</span>
+                <button class="btn-remove-ringtone" id="removeRingtoneBtn" style="display: none;" onclick="removeCustomRingtone()">🗑️ 移除</button>
+            </div>
+            <p style="color: white; font-size: 0.85em; margin-top: 10px; opacity: 0.8;">
+                💡 提示: 请选择较小的音频文件（建议小于1MB）
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>👥 分组管理</h2>
+            <div class="input-group">
+                <input type="text" id="groupName" placeholder="分组名称">
+                <button class="btn btn-create-group" onclick="createGroup()">创建分组</button>
+                <span style="margin-left: 20px; color: #666; line-height: 40px;">筛选:</span>
+                <select id="filterGroupSelect" onchange="renderGroups()">
+                    <option value="">显示全部</option>
+                    <option value="ungrouped">未分组</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="group-list" id="groupList">
+            <div class="empty-state">
+                <div style="font-size: 4em; margin-bottom: 10px;">⏳</div>
+                <p>还没有添加倒计时</p>
+                <p style="font-size: 0.9em;">在上方添加倒计时开始计时</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let timers = [];
+        let groups = [];
+        let timerIdCounter = 0;
+        let groupIdCounter = 0;
+
+        const STORAGE_KEY_TIMERS = 'countdown_timers';
+        const STORAGE_KEY_GROUPS = 'countdown_groups';
+        const STORAGE_KEY_COUNTERS = 'countdown_counters';
+
+        function loadData() {
+            try {
+                const timersData = localStorage.getItem(STORAGE_KEY_TIMERS);
+                const groupsData = localStorage.getItem(STORAGE_KEY_GROUPS);
+                const countersData = localStorage.getItem(STORAGE_KEY_COUNTERS);
+
+                if (timersData) {
+                    timers = JSON.parse(timersData);
+                }
+                if (groupsData) {
+                    groups = JSON.parse(groupsData);
+                }
+                if (countersData) {
+                    const counters = JSON.parse(countersData);
+                    timerIdCounter = counters.timerIdCounter || 0;
+                    groupIdCounter = counters.groupIdCounter || 0;
+                }
+            } catch (e) {
+                console.log('加载数据失败:', e);
+            }
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem(STORAGE_KEY_TIMERS, JSON.stringify(timers));
+                localStorage.setItem(STORAGE_KEY_GROUPS, JSON.stringify(groups));
+                localStorage.setItem(STORAGE_KEY_COUNTERS, JSON.stringify({
+                    timerIdCounter,
+                    groupIdCounter
+                }));
+            } catch (e) {
+                console.log('保存数据失败:', e);
+            }
+        }
+
+        function createGroup() {
+            const name = document.getElementById('groupName').value.trim();
+            if (!name) {
+                alert('请输入分组名称');
+                return;
+            }
+            if (groups.some(g => g.name === name)) {
+                alert('该分组名称已存在');
+                return;
+            }
+
+            groups.push({
+                id: ++groupIdCounter,
+                name
+            });
+
+            document.getElementById('groupName').value = '';
+            updateGroupSelect();
+            renderGroups();
+            saveData();
+        }
+
+        function updateGroupSelect() {
+            const select = document.getElementById('groupSelect');
+            select.innerHTML = '<option value="">选择分组</option>' +
+                groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+            
+            const filterSelect = document.getElementById('filterGroupSelect');
+            filterSelect.innerHTML = '<option value="">显示全部</option>' +
+                '<option value="ungrouped">未分组</option>' +
+                groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+        }
+
+        function addTimer() {
+            const hours = parseInt(document.getElementById('hours').value) || 0;
+            const minutes = parseInt(document.getElementById('minutes').value) || 0;
+            const seconds = parseInt(document.getElementById('seconds').value) || 0;
+            const name = document.getElementById('timerName').value.trim() || `倒计时 ${timers.length + 1}`;
+            const groupId = parseInt(document.getElementById('groupSelect').value) || null;
+
+            if (hours === 0 && minutes === 0 && seconds === 0) {
+                alert('请设置有效的倒计时时间');
+                return;
+            }
+
+            const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+            const timer = {
+                id: ++timerIdCounter,
+                name,
+                totalSeconds,
+                remainingSeconds: totalSeconds,
+                intervalId: null,
+                status: 'waiting',
+                groupId
+            };
+
+            timers.push(timer);
+            renderGroups();
+            saveData();
+
+            document.getElementById('hours').value = '';
+            document.getElementById('minutes').value = '';
+            document.getElementById('seconds').value = '';
+            document.getElementById('timerName').value = '';
+            document.getElementById('groupSelect').value = '';
+        }
+
+        function getTimersByGroup(groupId) {
+            return timers.filter(t => t.groupId === groupId);
+        }
+
+        function getUngroupedTimers() {
+            return timers.filter(t => t.groupId === null);
+        }
+
+        function renderGroups() {
+            const groupList = document.getElementById('groupList');
+            const filterGroupId = document.getElementById('filterGroupSelect').value;
+
+            if (timers.length === 0) {
+                groupList.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 4em; margin-bottom: 10px;">⏳</div>
+                        <p>还没有添加倒计时</p>
+                        <p style="font-size: 0.9em;">在上方添加倒计时开始计时</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            let hasVisibleContent = false;
+
+            const ungroupedTimers = getUngroupedTimers();
+            const shouldShowUngrouped = !filterGroupId || filterGroupId === 'ungrouped';
+            
+            if (shouldShowUngrouped && ungroupedTimers.length > 0) {
+                html += `
+                    <div class="group-card ungrouped-section">
+                        <div class="group-header">
+                            <span class="group-name">📋 未分组 <span class="group-count">(${ungroupedTimers.length})</span></span>
+                        </div>
+                        <div class="group-timers">
+                            ${ungroupedTimers.map(t => renderTimerCard(t)).join('')}
+                        </div>
+                        <button class="btn btn-start-group" onclick="startGroupTimers(null)">▶️ 开始本组</button>
+                    </div>
+                `;
+                hasVisibleContent = true;
+            }
+
+            groups.forEach(group => {
+                const groupTimers = getTimersByGroup(group.id);
+                const shouldShowGroup = !filterGroupId || filterGroupId === String(group.id);
+                
+                if (shouldShowGroup && groupTimers.length > 0) {
+                    html += `
+                        <div class="group-card">
+                            <div class="group-header">
+                                <span class="group-name">📁 ${group.name} <span class="group-count">(${groupTimers.length})</span></span>
+                                <button class="btn btn-delete-group" onclick="deleteGroup(${group.id})">删除分组</button>
+                            </div>
+                            <div class="group-timers">
+                                ${groupTimers.map(t => renderTimerCard(t)).join('')}
+                            </div>
+                            <button class="btn btn-start-group" onclick="startGroupTimers(${group.id})">▶️ 开始本组</button>
+                        </div>
+                    `;
+                    hasVisibleContent = true;
+                }
+            });
+
+            if (!hasVisibleContent) {
+                html = `
+                    <div class="empty-state">
+                        <div style="font-size: 4em; margin-bottom: 10px;">📭</div>
+                        <p>该分组没有倒计时</p>
+                        <p style="font-size: 0.9em;">在上方添加倒计时到该分组</p>
+                    </div>
+                `;
+            }
+
+            groupList.innerHTML = html;
+        }
+
+        function renderTimerCard(timer) {
+            return `
+                <div class="timer-card" id="timer-${timer.id}">
+                    <div class="timer-header">
+                        <span class="timer-name">${timer.name}</span>
+                        <span class="status ${timer.status}">${getStatusText(timer.status)}</span>
+                    </div>
+                    <div class="timer-time ${getTimeClass(timer)}">${formatTime(timer.remainingSeconds)}</div>
+                    <div class="timer-actions">
+                        ${timer.status === 'running' ? 
+                            `<button class="btn btn-pause" onclick="pauseTimer(${timer.id})">⏸️ 暂停</button>` : 
+                            `<button class="btn btn-start" onclick="startTimer(${timer.id})">▶️ 开始</button>`
+                        }
+                        <button class="btn btn-reset" onclick="resetTimer(${timer.id})">🔄 重置</button>
+                        <button class="btn btn-remove-from-group" onclick="removeFromGroup(${timer.id})">📤 移出分组</button>
+                        <button class="btn btn-delete" onclick="deleteTimer(${timer.id})">🗑️ 删除</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                waiting: '等待中',
+                running: '运行中',
+                paused: '已暂停',
+                completed: '已完成'
+            };
+            return texts[status] || status;
+        }
+
+        function getTimeClass(timer) {
+            if (timer.status === 'completed') return 'danger';
+            const percentage = timer.remainingSeconds / timer.totalSeconds;
+            if (percentage <= 0.1) return 'danger';
+            if (percentage <= 0.25) return 'warning';
+            return '';
+        }
+
+        function startTimer(id) {
+            const timer = timers.find(t => t.id === id);
+            if (!timer || timer.status === 'running') return;
+
+            if (timer.status === 'completed') {
+                timer.remainingSeconds = timer.totalSeconds;
+            }
+
+            timer.status = 'running';
+            renderGroups();
+
+            timer.intervalId = setInterval(() => {
+                timer.remainingSeconds--;
+
+                if (timer.remainingSeconds <= 0) {
+                    clearInterval(timer.intervalId);
+                    timer.remainingSeconds = 0;
+                    timer.status = 'completed';
+                    playAlarm();
+                    renderGroups();
+                    return;
+                }
+
+                renderGroups();
+            }, 1000);
+        }
+
+        function pauseTimer(id) {
+            const timer = timers.find(t => t.id === id);
+            if (!timer || timer.status !== 'running') return;
+
+            clearInterval(timer.intervalId);
+            timer.intervalId = null;
+            timer.status = 'paused';
+            renderGroups();
+        }
+
+        function resetTimer(id) {
+            const timer = timers.find(t => t.id === id);
+            if (!timer) return;
+
+            clearInterval(timer.intervalId);
+            timer.intervalId = null;
+            timer.remainingSeconds = timer.totalSeconds;
+            timer.status = 'waiting';
+            renderGroups();
+        }
+
+        function deleteTimer(id) {
+            const timer = timers.find(t => t.id === id);
+            if (timer && timer.intervalId) {
+                clearInterval(timer.intervalId);
+            }
+
+            timers = timers.filter(t => t.id !== id);
+            renderGroups();
+            saveData();
+        }
+
+        function removeFromGroup(timerId) {
+            const timer = timers.find(t => t.id === timerId);
+            if (timer) {
+                timer.groupId = null;
+                renderGroups();
+                saveData();
+            }
+        }
+
+        function deleteGroup(groupId) {
+            if (!confirm('确定要删除这个分组吗？分组中的倒计时将被移到未分组。')) {
+                return;
+            }
+
+            timers.forEach(t => {
+                if (t.groupId === groupId) {
+                    t.groupId = null;
+                }
+            });
+
+            groups = groups.filter(g => g.id !== groupId);
+            updateGroupSelect();
+            renderGroups();
+            saveData();
+        }
+
+        function startAllTimers() {
+            timers.forEach(timer => {
+                if (timer.status === 'waiting' || timer.status === 'paused') {
+                    startTimer(timer.id);
+                }
+            });
+        }
+
+        function startGroupTimers(groupId) {
+            const groupTimers = groupId === null ? getUngroupedTimers() : getTimersByGroup(groupId);
+            groupTimers.forEach(timer => {
+                if (timer.status !== 'running') {
+                    startTimer(timer.id);
+                }
+            });
+        }
+
+        let customRingtoneData = null;
+        
+        function loadCustomRingtone() {
+            try {
+                const data = localStorage.getItem('custom_ringtone');
+                if (data) {
+                    customRingtoneData = data;
+                    updateRingtoneDisplay();
+                }
+            } catch (e) {
+                console.log('加载自定义铃声失败:', e);
+            }
+        }
+        
+        function saveCustomRingtone(data) {
+            try {
+                localStorage.setItem('custom_ringtone', data);
+                customRingtoneData = data;
+                updateRingtoneDisplay();
+            } catch (e) {
+                alert('存储空间不足，请选择较小的音频文件');
+                console.log('保存自定义铃声失败:', e);
+            }
+        }
+        
+        function updateRingtoneDisplay() {
+            const display = document.getElementById('currentRingtone');
+            const removeBtn = document.getElementById('removeRingtoneBtn');
+            if (customRingtoneData) {
+                display.textContent = '当前: 自定义铃声 ✓';
+                removeBtn.style.display = 'inline-block';
+            } else {
+                display.textContent = '当前: 默认铃声';
+                removeBtn.style.display = 'none';
+            }
+        }
+        
+        function handleRingtoneUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // 检查文件大小（限制5MB）
+            if (file.size > 5 * 1024 * 1024) {
+                alert('文件太大，建议选择小于1MB的音频文件');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = e.target.result;
+                saveCustomRingtone(data);
+                // 初始化音频上下文（iOS需要）
+                try {
+                    const audio = new Audio();
+                    audio.src = data;
+                } catch (err) {}
+            };
+            reader.onerror = function() {
+                alert('读取文件失败');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function removeCustomRingtone() {
+            if (!confirm('确定要移除自定义铃声吗？')) return;
+            try {
+                localStorage.removeItem('custom_ringtone');
+                customRingtoneData = null;
+                updateRingtoneDisplay();
+                document.getElementById('ringtoneFile').value = '';
+            } catch (e) {
+                console.log('移除铃声失败:', e);
+            }
+        }
+        
+        function playCustomRingtone() {
+            if (!customRingtoneData) return false;
+            
+            try {
+                const audio = new Audio(customRingtoneData);
+                audio.play().catch(e => {
+                    console.log('播放自定义铃声失败:', e);
+                    playAlarm(); // 降级到默认铃声
+                });
+                return true;
+            } catch (e) {
+                console.log('播放自定义铃声失败:', e);
+                return false;
+            }
+        }
+        
+        // 增强版playAlarm函数
+        function playAlarm() {
+            // 优先使用自定义铃声
+            if (customRingtoneData && playCustomRingtone()) {
+                return;
+            }
+            
+            // 降级到默认铃声
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // iOS需要用户交互后才能播放，先resume
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                const playNote = (freq, startTime, duration, volume) => {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, startTime);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 0.98, startTime + duration * 0.5);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 0.95, startTime + duration);
+                    
+                    gain.gain.setValueAtTime(0, startTime);
+                    gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                    
+                    osc.start(startTime);
+                    osc.stop(startTime + duration);
+                };
+                
+                const melody = [
+                    { freq: 523.25, delay: 0, dur: 0.3 },
+                    { freq: 659.25, delay: 0.15, dur: 0.3 },
+                    { freq: 783.99, delay: 0.3, dur: 0.3 },
+                    { freq: 1046.50, delay: 0.45, dur: 0.4 },
+                    { freq: 783.99, delay: 0.9, dur: 0.3 },
+                    { freq: 659.25, delay: 1.05, dur: 0.3 },
+                    { freq: 523.25, delay: 1.2, dur: 0.5 },
+                ];
+                
+                const startTime = audioContext.currentTime + 0.1;
+                melody.forEach(note => {
+                    playNote(note.freq, startTime + note.delay, note.dur, 0.15);
+                });
+                
+            } catch (e) {
+                console.log('无法播放声音:', e);
+            }
+        }
+        
+        // iOS需要用户交互才能播放音频，在页面加载时添加交互监听
+        document.addEventListener('click', function initAudio() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            } catch (e) {}
+            document.removeEventListener('click', initAudio);
+        }, { once: true });
+
+        loadData();
+        loadCustomRingtone();
+        updateGroupSelect();
+        renderGroups();
+    </script>
+</body>
+</html>
