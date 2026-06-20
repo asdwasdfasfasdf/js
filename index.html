@@ -673,41 +673,74 @@
             return sharedAudioContext;
         }
         
-        // 播放自定义音乐链接
+        // 播放自定义音乐链接 - 兼容iOS Safari
         function playCustomMusic(musicUrl) {
             return new Promise((resolve) => {
-                try {
-                    const audio = new Audio();
-                    audio.crossOrigin = 'anonymous';
-                    audio.src = musicUrl;
-                    
-                    audio.oncanplaythrough = () => {
-                        audio.play().then(() => {
-                            audio.onended = () => resolve();
-                            audio.onerror = () => resolve();
-                        }).catch(e => {
-                            console.log('播放失败，播放默认铃声');
+                const audioContext = getAudioContext();
+                
+                // 先尝试恢复音频上下文（iOS需要用户交互后才能播放）
+                const resumeAndPlay = async () => {
+                    if (audioContext.state === 'suspended') {
+                        try {
+                            await audioContext.resume();
+                        } catch (e) {
+                            console.log('恢复音频上下文失败');
                             resolve();
-                        });
-                    };
-                    
-                    audio.onerror = () => {
-                        console.log('加载音乐失败，播放默认铃声');
-                        resolve();
-                    };
-                    
-                    // 30秒超时
-                    setTimeout(() => {
-                        if (!audio.ended) {
-                            audio.pause();
+                            return;
                         }
-                        resolve();
-                    }, 30000);
+                    }
                     
-                } catch (e) {
-                    console.log('播放自定义音乐失败:', e);
-                    resolve();
-                }
+                    try {
+                        // 使用fetch获取音频数据
+                        const response = await fetch(musicUrl, { mode: 'no-cors' });
+                        const arrayBuffer = await response.arrayBuffer();
+                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                        
+                        // 创建音频源
+                        const source = audioContext.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(audioContext.destination);
+                        
+                        source.onended = () => resolve();
+                        source.onerror = () => {
+                            console.log('播放失败');
+                            resolve();
+                        };
+                        
+                        source.start();
+                        
+                    } catch (e) {
+                        console.log('播放自定义音乐失败，尝试使用Audio元素:', e);
+                        // 降级到Audio元素方式
+                        try {
+                            const audio = new Audio(musicUrl);
+                            audio.volume = 1;
+                            
+                            audio.oncanplay = () => {
+                                audio.play().then(() => {
+                                    audio.onended = () => resolve();
+                                    audio.onerror = () => resolve();
+                                }).catch(() => resolve());
+                            };
+                            
+                            audio.onerror = () => resolve();
+                            
+                            // 10秒超时
+                            setTimeout(() => {
+                                if (!audio.ended) {
+                                    audio.pause();
+                                }
+                                resolve();
+                            }, 10000);
+                            
+                        } catch (e2) {
+                            console.log('Audio元素方式也失败:', e2);
+                            resolve();
+                        }
+                    }
+                };
+                
+                resumeAndPlay();
             });
         }
         
