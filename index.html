@@ -272,7 +272,10 @@
                 </select>
             </div>
             <div class="input-group" style="margin-top: 15px;">
-                <input type="text" id="timerMusicUrl" value="https://asdwasdfasfasdf.github.io/js/q.m4a" placeholder="音乐链接" style="flex: 1;">
+                <select id="timerMusicSelect" style="flex: 1; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; outline: none;">
+                    <option value="">默认铃声</option>
+                    <option value="https://asdwasdfasfasdf.github.io/js/q.m4a">音乐1</option>
+                </select>
                 <button class="btn btn-add" onclick="addTimer()">添加</button>
             </div>
         </div>
@@ -383,7 +386,7 @@
             const seconds = parseInt(document.getElementById('seconds').value) || 0;
             const name = document.getElementById('timerName').value.trim() || `倒计时 ${timers.length + 1}`;
             const groupId = parseInt(document.getElementById('groupSelect').value) || null;
-            const musicUrl = document.getElementById('timerMusicUrl').value.trim() || null;
+            const musicUrl = document.getElementById('timerMusicSelect').value || null;
 
             if (hours === 0 && minutes === 0 && seconds === 0) {
                 alert('请设置有效的倒计时时间');
@@ -412,7 +415,7 @@
             document.getElementById('seconds').value = '';
             document.getElementById('timerName').value = '';
             document.getElementById('groupSelect').value = '';
-            document.getElementById('timerMusicUrl').value = '';
+            document.getElementById('timerMusicSelect').value = '';
         }
 
         function getTimersByGroup(groupId) {
