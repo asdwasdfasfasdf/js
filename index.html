@@ -679,47 +679,124 @@
             return sharedAudioContext;
         }
         
-        // 播放自定义音乐链接 - 兼容iOS Safari
+        // 音乐缓存相关 - 使用IndexedDB
+        let db = null;
+        
+        function openCacheDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('MusicCacheDB', 1);
+                
+                request.onerror = () => reject(request.error);
+                
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const database = event.target.result;
+                    if (!database.objectStoreNames.contains('music')) {
+                        database.createObjectStore('music', { keyPath: 'url' });
+                    }
+                };
+            });
+        }
+        
+        async function getCachedMusic(url) {
+            if (!db) await openCacheDB();
+            
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['music'], 'readonly');
+                const store = transaction.objectStore('music');
+                const request = store.get(url);
+                
+                request.onsuccess = () => {
+                    resolve(request.result ? request.result.data : null);
+                };
+                
+                request.onerror = () => {
+                    console.log('读取缓存失败');
+                    resolve(null);
+                };
+            });
+        }
+        
+        async function cacheMusic(url, data) {
+            if (!db) await openCacheDB();
+            
+            return new Promise((resolve) => {
+                try {
+                    const transaction = db.transaction(['music'], 'readwrite');
+                    const store = transaction.objectStore('music');
+                    store.put({ url, data, timestamp: Date.now() });
+                    
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => {
+                        console.log('缓存失败');
+                        resolve();
+                    };
+                } catch (e) {
+                    console.log('缓存异常:', e);
+                    resolve();
+                }
+            });
+        }
+        
+        // 播放自定义音乐链接 - 带缓存功能
         function playCustomMusic(musicUrl) {
             return new Promise((resolve) => {
-                const audio = new Audio();
-                audio.src = musicUrl;
-                audio.volume = 1;
+                const audioContext = getAudioContext();
                 
-                // 等待音频完全加载后再播放
-                audio.oncanplaythrough = () => {
-                    audio.play().then(() => {
-                        audio.onended = () => {
+                const playFromBuffer = (arrayBuffer) => {
+                    audioContext.decodeAudioData(arrayBuffer, (audioBuffer) => {
+                        const source = audioContext.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(audioContext.destination);
+                        
+                        source.onended = () => {
                             console.log('音乐播放完成');
                             resolve();
                         };
-                        audio.onerror = () => {
-                            console.log('播放过程中出错');
+                        source.onerror = () => {
+                            console.log('播放失败');
                             resolve();
                         };
-                    }).catch(e => {
-                        console.log('播放失败:', e);
+                        
+                        source.start();
+                    }, () => {
+                        console.log('解码失败');
                         resolve();
                     });
                 };
                 
-                // 加载失败时的处理
-                audio.onerror = () => {
-                    console.log('加载音乐失败');
-                    resolve();
-                };
-                
-                // 加载超时处理（30秒）
-                setTimeout(() => {
-                    if (!audio.ended && audio.currentTime === 0) {
-                        console.log('音乐加载超时');
-                        audio.pause();
+                const fetchAndPlay = async () => {
+                    try {
+                        const response = await fetch(musicUrl);
+                        const arrayBuffer = await response.arrayBuffer();
+                        
+                        // 缓存到本地
+                        cacheMusic(musicUrl, arrayBuffer);
+                        
+                        // 播放
+                        playFromBuffer(arrayBuffer);
+                    } catch (e) {
+                        console.log('下载失败:', e);
                         resolve();
                     }
-                }, 30000);
+                };
                 
-                // 强制加载
-                audio.load();
+                // 先尝试从缓存读取
+                getCachedMusic(musicUrl).then(cachedData => {
+                    if (cachedData) {
+                        console.log('使用缓存音乐');
+                        playFromBuffer(cachedData);
+                    } else {
+                        console.log('下载音乐...');
+                        fetchAndPlay();
+                    }
+                }).catch(() => {
+                    fetchAndPlay();
+                });
             });
         }
         
