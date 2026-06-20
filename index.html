@@ -536,6 +536,7 @@
             }
 
             timer.status = 'running';
+            saveData();
             renderGroups();
 
             timer.intervalId = setInterval(() => {
@@ -545,6 +546,7 @@
                     clearInterval(timer.intervalId);
                     timer.remainingSeconds = 0;
                     timer.status = 'completed';
+                    saveData();
                     playAlarm();
                     renderGroups();
                     
@@ -578,6 +580,7 @@
             clearInterval(timer.intervalId);
             timer.intervalId = null;
             timer.status = 'paused';
+            saveData();
             renderGroups();
         }
 
@@ -589,6 +592,7 @@
             timer.intervalId = null;
             timer.remainingSeconds = timer.totalSeconds;
             timer.status = 'waiting';
+            saveData();
             renderGroups();
         }
 
