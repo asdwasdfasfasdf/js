@@ -275,6 +275,7 @@
                 <select id="timerMusicSelect" style="flex: 1; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; outline: none;">
                     <option value="">默认铃声</option>
                     <option value="https://asdwasdfasfasdf.github.io/js/q.m4a">音乐1</option>
+                    <option value="https://asdwasdfasfasdf.github.io/js/w.m4a">音乐2</option>
                 </select>
                 <button class="btn btn-add" onclick="addTimer()">添加</button>
             </div>
@@ -497,14 +498,12 @@
         }
 
         function renderTimerCard(timer) {
-            const musicIcon = timer.musicUrl ? '🎵' : '';
             return `
                 <div class="timer-card" id="timer-${timer.id}">
                     <div class="timer-header">
-                        <span class="timer-name">${timer.name} ${musicIcon}</span>
+                        <span class="timer-name">${timer.name}</span>
                         <span class="status ${timer.status}">${getStatusText(timer.status)}</span>
                     </div>
-                    ${timer.musicUrl ? `<div class="timer-music-url" title="${timer.musicUrl}">链接: ${timer.musicUrl.substring(0, 30)}${timer.musicUrl.length > 30 ? '...' : ''}</div>` : ''}
                     <div class="timer-time ${getTimeClass(timer)}">${formatTime(timer.remainingSeconds)}</div>
                     <div class="timer-actions">
                         ${timer.status === 'running' ? 
