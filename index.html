@@ -645,56 +645,59 @@
             }
         }
 
+        // 全局音频上下文，在用户交互时初始化
+        let sharedAudioContext = null;
+        
+        function getAudioContext() {
+            if (!sharedAudioContext) {
+                sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return sharedAudioContext;
+        }
+        
+        // 默认铃声 - 使用BufferSource方式，更兼容iOS Safari
         function playAlarm() {
             try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const audioContext = getAudioContext();
                 
-                const playMelody = () => {
-                    const playNote = (freq, startTime, duration, volume) => {
-                        const osc = audioContext.createOscillator();
-                        const gain = audioContext.createGain();
-                        
-                        osc.connect(gain);
-                        gain.connect(audioContext.destination);
-                        
-                        osc.type = 'sine';
-                        osc.frequency.setValueAtTime(freq, startTime);
-                        osc.frequency.exponentialRampToValueAtTime(freq * 0.98, startTime + duration * 0.5);
-                        osc.frequency.exponentialRampToValueAtTime(freq * 0.95, startTime + duration);
-                        
-                        gain.gain.setValueAtTime(0, startTime);
-                        gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
-                        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-                        
-                        osc.start(startTime);
-                        osc.stop(startTime + duration);
-                    };
+                const playTone = (frequency, duration, startTime, volume = 0.15) => {
+                    const sampleRate = audioContext.sampleRate;
+                    const samples = duration * sampleRate;
+                    const buffer = audioContext.createBuffer(1, samples, sampleRate);
+                    const data = buffer.getChannelData(0);
                     
-                    const melody = [
-                        { freq: 523.25, delay: 0, dur: 0.3 },
-                        { freq: 659.25, delay: 0.15, dur: 0.3 },
-                        { freq: 783.99, delay: 0.3, dur: 0.3 },
-                        { freq: 1046.50, delay: 0.45, dur: 0.4 },
-                        { freq: 783.99, delay: 0.9, dur: 0.3 },
-                        { freq: 659.25, delay: 1.05, dur: 0.3 },
-                        { freq: 523.25, delay: 1.2, dur: 0.5 },
-                    ];
+                    for (let i = 0; i < samples; i++) {
+                        const t = i / sampleRate;
+                        const envelope = t < 0.02 ? t / 0.02 : 1 - (t - 0.02) / (duration - 0.02);
+                        data[i] = Math.sin(2 * Math.PI * frequency * t) * envelope * volume;
+                    }
                     
-                    const startTime = audioContext.currentTime + 0.1;
-                    melody.forEach(note => {
-                        playNote(note.freq, startTime + note.delay, note.dur, 0.15);
+                    const source = audioContext.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(audioContext.destination);
+                    source.start(startTime);
+                };
+                
+                const notes = [
+                    { freq: 523.25, delay: 0, dur: 0.2 },
+                    { freq: 659.25, delay: 0.12, dur: 0.2 },
+                    { freq: 783.99, delay: 0.24, dur: 0.2 },
+                    { freq: 1046.50, delay: 0.36, dur: 0.3 },
+                ];
+                
+                const resumeAndPlay = () => {
+                    const startTime = audioContext.currentTime;
+                    notes.forEach(note => {
+                        playTone(note.freq, note.dur, startTime + note.delay);
                     });
                 };
                 
-                // iOS需要用户交互后才能播放，先resume
                 if (audioContext.state === 'suspended') {
-                    audioContext.resume().then(() => {
-                        playMelody();
-                    }).catch(e => {
-                        console.log('恢复音频上下文失败:', e);
+                    audioContext.resume().then(resumeAndPlay).catch(e => {
+                        console.log('恢复失败:', e);
                     });
                 } else {
-                    playMelody();
+                    resumeAndPlay();
                 }
                 
             } catch (e) {
@@ -707,7 +710,7 @@
         document.addEventListener('click', function initAudio() {
             if (audioInitialized) return;
             try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const audioContext = getAudioContext();
                 if (audioContext.state === 'suspended') {
                     audioContext.resume().then(() => {
                         audioInitialized = true;
@@ -717,6 +720,21 @@
                 }
             } catch (e) {}
         });
+        
+        // 也监听触摸事件，兼容iOS Safari
+        document.addEventListener('touchstart', function initAudioTouch() {
+            if (audioInitialized) return;
+            try {
+                const audioContext = getAudioContext();
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        audioInitialized = true;
+                    });
+                } else {
+                    audioInitialized = true;
+                }
+            } catch (e) {}
+        }, { once: true });
 
         loadData();
         updateGroupSelect();
