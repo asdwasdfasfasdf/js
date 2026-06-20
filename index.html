@@ -157,6 +157,12 @@
             font-weight: 500;
             color: #333;
         }
+        .timer-music-url {
+            font-size: 0.75em;
+            color: #888;
+            margin-top: 5px;
+            word-break: break-all;
+        }
         .timer-time {
             font-size: 2.5em;
             font-weight: 700;
@@ -264,6 +270,9 @@
                 <select id="groupSelect">
                     <option value="">选择分组</option>
                 </select>
+            </div>
+            <div class="input-group" style="margin-top: 15px;">
+                <input type="text" id="timerMusicUrl" value="https://asdwasdfasfasdf.github.io/js/q.m4a" placeholder="音乐链接" style="flex: 1;">
                 <button class="btn btn-add" onclick="addTimer()">添加</button>
             </div>
         </div>
@@ -374,6 +383,7 @@
             const seconds = parseInt(document.getElementById('seconds').value) || 0;
             const name = document.getElementById('timerName').value.trim() || `倒计时 ${timers.length + 1}`;
             const groupId = parseInt(document.getElementById('groupSelect').value) || null;
+            const musicUrl = document.getElementById('timerMusicUrl').value.trim() || null;
 
             if (hours === 0 && minutes === 0 && seconds === 0) {
                 alert('请设置有效的倒计时时间');
@@ -389,7 +399,8 @@
                 remainingSeconds: totalSeconds,
                 intervalId: null,
                 status: 'waiting',
-                groupId
+                groupId,
+                musicUrl
             };
 
             timers.push(timer);
@@ -401,6 +412,7 @@
             document.getElementById('seconds').value = '';
             document.getElementById('timerName').value = '';
             document.getElementById('groupSelect').value = '';
+            document.getElementById('timerMusicUrl').value = '';
         }
 
         function getTimersByGroup(groupId) {
@@ -482,12 +494,14 @@
         }
 
         function renderTimerCard(timer) {
+            const musicIcon = timer.musicUrl ? '🎵' : '';
             return `
                 <div class="timer-card" id="timer-${timer.id}">
                     <div class="timer-header">
-                        <span class="timer-name">${timer.name}</span>
+                        <span class="timer-name">${timer.name} ${musicIcon}</span>
                         <span class="status ${timer.status}">${getStatusText(timer.status)}</span>
                     </div>
+                    ${timer.musicUrl ? `<div class="timer-music-url" title="${timer.musicUrl}">链接: ${timer.musicUrl.substring(0, 30)}${timer.musicUrl.length > 30 ? '...' : ''}</div>` : ''}
                     <div class="timer-time ${getTimeClass(timer)}">${formatTime(timer.remainingSeconds)}</div>
                     <div class="timer-actions">
                         ${timer.status === 'running' ? 
@@ -547,7 +561,7 @@
                     timer.remainingSeconds = 0;
                     timer.status = 'completed';
                     saveData();
-                    playAlarm();
+                    playAlarm(timer);
                     renderGroups();
                     
                     startNextTimer(id);
@@ -659,8 +673,46 @@
             return sharedAudioContext;
         }
         
+        // 播放自定义音乐链接
+        function playCustomMusic(musicUrl) {
+            return new Promise((resolve) => {
+                try {
+                    const audio = new Audio();
+                    audio.crossOrigin = 'anonymous';
+                    audio.src = musicUrl;
+                    
+                    audio.oncanplaythrough = () => {
+                        audio.play().then(() => {
+                            audio.onended = () => resolve();
+                            audio.onerror = () => resolve();
+                        }).catch(e => {
+                            console.log('播放失败，播放默认铃声');
+                            resolve();
+                        });
+                    };
+                    
+                    audio.onerror = () => {
+                        console.log('加载音乐失败，播放默认铃声');
+                        resolve();
+                    };
+                    
+                    // 30秒超时
+                    setTimeout(() => {
+                        if (!audio.ended) {
+                            audio.pause();
+                        }
+                        resolve();
+                    }, 30000);
+                    
+                } catch (e) {
+                    console.log('播放自定义音乐失败:', e);
+                    resolve();
+                }
+            });
+        }
+        
         // 默认铃声 - 使用BufferSource方式，更兼容iOS Safari
-        function playAlarm() {
+        function playDefaultAlarm() {
             try {
                 const audioContext = getAudioContext();
                 
@@ -706,6 +758,17 @@
                 
             } catch (e) {
                 console.log('无法播放声音:', e);
+            }
+        }
+        
+        // 播放铃声 - 有自定义音乐链接就只播放自定义音乐，没有才播放默认铃声
+        async function playAlarm(timer) {
+            // 如果有自定义音乐链接，只播放自定义音乐
+            if (timer && timer.musicUrl) {
+                await playCustomMusic(timer.musicUrl);
+            } else {
+                // 没有自定义链接，播放默认铃声
+                playDefaultAlarm();
             }
         }
         
