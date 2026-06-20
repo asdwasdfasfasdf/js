@@ -547,11 +547,28 @@
                     timer.status = 'completed';
                     playAlarm();
                     renderGroups();
+                    
+                    startNextTimer(id);
                     return;
                 }
 
                 renderGroups();
             }, 1000);
+        }
+
+        function startNextTimer(currentId) {
+            const currentIndex = timers.findIndex(t => t.id === currentId);
+            if (currentIndex === -1 || currentIndex >= timers.length - 1) {
+                return;
+            }
+            
+            for (let i = currentIndex + 1; i < timers.length; i++) {
+                const nextTimer = timers[i];
+                if (nextTimer.status === 'waiting' || nextTimer.status === 'completed') {
+                    setTimeout(() => startTimer(nextTimer.id), 1000);
+                    break;
+                }
+            }
         }
 
         function pauseTimer(id) {
@@ -622,11 +639,10 @@
 
         function startGroupTimers(groupId) {
             const groupTimers = groupId === null ? getUngroupedTimers() : getTimersByGroup(groupId);
-            groupTimers.forEach(timer => {
-                if (timer.status !== 'running') {
-                    startTimer(timer.id);
-                }
-            });
+            const firstTimer = groupTimers.find(timer => timer.status !== 'running');
+            if (firstTimer) {
+                startTimer(firstTimer.id);
+            }
         }
 
         function playAlarm() {
